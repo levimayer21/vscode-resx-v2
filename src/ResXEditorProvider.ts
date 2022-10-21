@@ -37,7 +37,7 @@ export class ResXEditorProvider implements vscode.CustomTextEditorProvider {
         async function updateWebview() {
             webviewPanel.webview.postMessage({
                 type: 'update',
-                text: JSON.stringify(await resx.resx2js(document.getText(), true)),
+                text: JSON.stringify(await resx.resx2js(document.getText(), true))
             });
         }
 
@@ -86,6 +86,7 @@ export class ResXEditorProvider implements vscode.CustomTextEditorProvider {
 
         // Use a nonce to whitelist which scripts can be run
         const nonce = getNonce();
+		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'node_modules', '@vscode/codicons', 'dist', 'codicon.css'));
 
         return /* html */`
 			<!DOCTYPE html>
@@ -97,20 +98,36 @@ export class ResXEditorProvider implements vscode.CustomTextEditorProvider {
 				Use a content security policy to only allow loading images from https or from our extension directory,
 				and only allow scripts that have a specific nonce.
 				-->
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource}; img-src ${webview.cspSource}; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
+                <link href="${codiconsUri}" rel="stylesheet" />
 
 				<title>ResX Viewer</title>
 			</head>
 			<body>
                 <table>
                 <thead>
-                    <th>Name</th>
-                    <th>Value</th>
-                    <th>Comment</th>
+                    <th>
+                        <div class="resx-header">
+                            <h3>Name</h3>
+                            <i class="codicon codicon-chevron-down"></i>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="resx-header">
+                            <h3>Value</h3>
+                            <i class="codicon codicon-chevron-down"></i>
+                        </div>
+                    </th>
+                    <th>
+                        <div class="resx-header">
+                            <h3>Comment</h3>
+                            <i class="codicon codicon-chevron-down"></i>
+                        </div>
+                    </th>
                     <th></th>
                 </thead>
                 <tbody>
