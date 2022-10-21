@@ -3,7 +3,8 @@ box-sizing: border-box;
 padding: 0;
 margin: 0;
 }
-input {
+
+textarea {
     color: inherit;
     background-color: inherit;
     width:100%;
@@ -11,25 +12,35 @@ input {
     height: 100%;
     padding: 8px;
     border: 0;
+    resize: none;
+    overflow: hidden;
 }
+
 table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
 }
+
 th {
     background-color: var(--vscode-editor-background);
     position: sticky;
     top: 0;
     font-size: 1.2em;
-    padding: 8px;
     border: 1px solid;
     border-color: inherit;
 }
+
+th:not(.resx-header) {
+    padding: 8px;
+}
+
 td {
     border: 1px solid;
     border-color: inherit;
+    white-space:normal;
 }
+
 tr:nth-child(odd) td {
     background-color: var(--vscode-sideBar-background);
 }
@@ -48,4 +59,18 @@ td:last-child {
    text-align: center; 
     font-size: 1.2rem;
     cursor: pointer;
+}
+
+.resx-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.resx-header h3 {
+    flex-grow: 1;
+}
+
+.resx-header * {
+    padding: 8px;
 }

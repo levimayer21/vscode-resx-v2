@@ -9,27 +9,30 @@
     // @ts-ignore
     const vscode = acquireVsCodeApi();
 
-
     const notesContainer = /** @type {HTMLElement} */ (document.querySelector('tbody'));
-
 
     const errorContainer = document.createElement('div');
     document.body.appendChild(errorContainer);
-    errorContainer.className = 'error'
-    errorContainer.style.display = 'none'
+    errorContainer.className = 'error';
+    errorContainer.style.display = 'none';
+    
     /**
      * Render the document in the webview.
      */
     let inputEvent = () => {
+        saveResXRows();
+    };
+
+    let saveResXRows = () => {
         let obj = {};
         let a = notesContainer.querySelectorAll('tr');
         for (let rule of a) {
-            let inputs = rule.querySelectorAll('input');
-            if (inputs[0].value && inputs[1].value) {
-                obj[inputs[0].value] = {
-                    value: inputs[1].value,
-                    comment: inputs[2].value
-                }
+            let areas = rule.querySelectorAll('textarea');
+            if (areas.length && areas[0].value && areas[1].value) {
+                obj[areas[0].value] = {
+                    value: areas[1].value,
+                    comment: areas[2].value
+                };
             }
         }
         vscode.setState({ text: JSON.stringify(obj) });
@@ -39,55 +42,93 @@
         });
     };
 
-    let deleteEvent = (self) => {
+    let deleteEvent = (/** @type {HTMLTableRowElement} */ self) => {
         self.remove();
-        let obj = {};
-        let a = notesContainer.querySelectorAll('tr');
-        for (let rule of a) {
-            let inputs = rule.querySelectorAll('input');
-            if (inputs[0].value && inputs[1].value) {
-                obj[inputs[0].value] = {
-                    value: inputs[1].value,
-                    comment: inputs[2].value
-                }
-            }
-        }
-        vscode.setState({ text: JSON.stringify(obj) });
-        vscode.postMessage({
-            type: 'update',
-            json: JSON.stringify(obj)
-        });
-    }
+        saveResXRows();
+    };
+    // @ts-ignore
     document.querySelector('.plus').addEventListener('click', () => {
         const element = document.createElement('tr');
         notesContainer.appendChild(element);
 
-        const name = document.createElement('td');
-        const __name = document.createElement('input');
-        __name.oninput = inputEvent;
-        name.appendChild(__name);
-        __name.value = '';
-        const value = document.createElement('td');
-        const _value = document.createElement('input');
-        value.appendChild(_value);
-        _value.value = '';
-        _value.oninput = inputEvent;
-        const comment = document.createElement('td');
-        const _comment = document.createElement('input');
-        comment.appendChild(_comment);
-        _comment.value = '';
-        _comment.oninput = inputEvent;
+        const name = fillResXRow(null);
+        name.focus();
+        element.scrollIntoView();
+    });
+
+    /**
+     * @param {string | undefined} [_name]
+     * @param {Object | undefined} json
+     */
+    function fillResXRow(json, _name) {
+        /** @type {{value,comment} | null} */
+        let rule = null;
+        
+        if (_name)
+        {
+            rule = json[_name];
+        }
+
+        const element = document.createElement('tr');
+        notesContainer.appendChild(element);
+
+        const name = createCellForInput(_name);
+
+        const value = createCellForInput(rule?.value);
+
+        const comment = createCellForInput(rule?.comment);
+
         const drop = document.createElement('td');
         drop.innerHTML = '&times;';
         drop.onclick = () => deleteEvent(element);
         element.append(name, value, comment, drop);
-        name.focus();
-        element.scrollIntoView();
-    });
+        return name;
+    }
+
+    function createCellForInput(/** @type {string | undefined} **/ text) {
+        let newCell = document.createElement('td');
+        const _newCellInput = document.createElement('textarea');
+        _newCellInput.addEventListener("focusin", handleFocusInForTextArea);
+        _newCellInput.addEventListener("input", handleInputForTextArea);
+        _newCellInput.addEventListener("focusout", handleFocusOutForTextArea);
+        _newCellInput.addEventListener("focusout", inputEvent);
+        newCell.appendChild(_newCellInput);
+        _newCellInput.value = text ?? '';
+
+        return newCell;
+    }
+
+    function handleFocusInForTextArea(ev)
+    {
+        handleInputForTextArea(ev);
+    }
+
+    function handleInputForTextArea(ev) {
+        if (ev.target instanceof HTMLTextAreaElement)
+        {
+            setTextAreaHeightToMatchText(ev.target);
+        }
+    }
+
+    function setTextAreaHeightToMatchText(textArea) {
+        let cell = textArea.closest("td");
+
+        cell.style.height = 0;
+        cell.style.height = (textArea.scrollHeight) + "px";
+    }
+
+    function handleFocusOutForTextArea(ev) {
+        if (ev.target instanceof HTMLTextAreaElement)
+        {
+            ev.target.closest("td").style.height = null;
+        }
+    }
+    
     function updateContent(/** @type {string} */ text) {
         let json;
         try {
             json = JSON.parse(text);
+            json = sortResXJSON(json);
         } catch {
             notesContainer.style.display = 'none';
             errorContainer.innerText = 'Error: Document is not valid resx';
@@ -100,31 +141,19 @@
         // Render the scratches
         notesContainer.innerHTML = '';
         for (const _name in json || []) {
-            let rule = json[_name];
-            const element = document.createElement('tr');
-            notesContainer.appendChild(element);
-
-            const name = document.createElement('td');
-            const __name = document.createElement('input');
-            __name.oninput = inputEvent;
-            name.appendChild(__name);
-            __name.value = _name;
-            const value = document.createElement('td');
-            const _value = document.createElement('input');
-            value.appendChild(_value);
-            _value.value = rule.value || '';
-            _value.oninput = inputEvent;
-            const comment = document.createElement('td');
-            const _comment = document.createElement('input');
-            comment.appendChild(_comment);
-            _comment.value = rule.comment || '';
-            _comment.oninput = inputEvent;
-            const drop = document.createElement('td');
-            drop.innerHTML = '&times;';
-            drop.onclick = () => deleteEvent(element);
-            element.append(name, value, comment, drop);
+            fillResXRow(json, _name);
         }
 
+    }
+
+    function sortResXJSON(/** @type {Object} **/ json) {
+        return Object.keys(json)
+                .sort()
+                .reduce((accumulator, key) => {
+                    accumulator[key] = json[key];
+                
+                    return accumulator;
+                }, {});
     }
 
     // Handle messages sent from the extension to the webview
@@ -133,7 +162,7 @@
         switch (message.type) {
             case 'update':
                 const text = message.text;
-                if (text != vscode.getState()?.text) {
+                if (text !== vscode.getState()?.text) {
                     // Update our webview's content
                     updateContent(text);
                 }
